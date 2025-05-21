@@ -54,12 +54,12 @@ impl Maze {
         let mut maze_str = String::new();
 
         // Generate first line border.
-        maze_str.push('┌');
+        maze_str.push('╔');
         for (i, _) in self.cells[0].iter().enumerate() {
             let is_last_cell = i == self.cells[0].len() - 1;
 
-            maze_str.push_str("─────");
-            maze_str.push(if is_last_cell { '┐' } else { '┬' });
+            maze_str.push_str("═════");
+            maze_str.push(if is_last_cell { '╗' } else { '╦' });
         }
         maze_str.push('\n');
 
@@ -68,7 +68,7 @@ impl Maze {
 
             // Generate the body of each cell.
             let mut row_str = String::new();
-            row_str.push('│');
+            row_str.push('║');
             for (j, cell) in row.iter().enumerate() {
                 let is_first_row = i == 0;
                 let is_first_col = j == 0;
@@ -83,33 +83,33 @@ impl Maze {
                     ' '
                 };
                 row_str.push_str(&format!("  {center_char}  "));
-                row_str.push(if cell.can_exit_east { ' ' } else { '│' });
+                row_str.push(if cell.can_exit_east { ' ' } else { '║' });
             }
             row_str.push('\n');
             maze_str.push_str(&row_str);
             maze_str.push_str(&row_str);
 
             // Generate the border below the cell.
-            maze_str.push(if is_last_row { '└' } else { '├' });
+            maze_str.push(if is_last_row { '╚' } else { '╠' });
             for (j, cell) in row.iter().enumerate() {
                 let is_last_cell = j == row.len() - 1;
 
                 maze_str.push_str(if cell.can_exit_south {
                     "     "
                 } else {
-                    "─────"
+                    "═════"
                 });
                 maze_str.push(if is_last_row {
                     if is_last_cell {
-                        '┘'
+                        '╝'
                     } else {
-                        '┴'
+                        '╩'
                     }
                 } else {
                     if is_last_cell {
-                        '┤'
+                        '╣'
                     } else {
-                        '┼'
+                        '╬'
                     }
                 });
             }
