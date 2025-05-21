@@ -53,11 +53,12 @@ impl Maze {
     fn as_str(&self) -> String {
         let mut maze_str = String::new();
 
+        // Generate first line border.
         maze_str.push('┌');
         for (i, _) in self.cells[0].iter().enumerate() {
             let is_last_cell = i == self.cells[0].len() - 1;
 
-            maze_str.push('─');
+            maze_str.push_str("─────");
             maze_str.push(if is_last_cell { '┐' } else { '┬' });
         }
         maze_str.push('\n');
@@ -65,18 +66,39 @@ impl Maze {
         for (i, row) in self.cells.iter().enumerate() {
             let is_last_row = i == self.cells.len() - 1;
 
-            maze_str.push('│');
-            for cell in row {
-                maze_str.push(' ');
-                maze_str.push(if cell.can_exit_east { ' ' } else { '│' });
-            }
-            maze_str.push('\n');
+            // Generate the body of each cell.
+            let mut row_str = String::new();
+            row_str.push('│');
+            for (j, cell) in row.iter().enumerate() {
+                let is_first_row = i == 0;
+                let is_first_col = j == 0;
+                let is_last_row = i == self.cells.len() - 1;
+                let is_last_col = j == row.len() - 1;
 
+                let center_char = if is_first_row && is_first_col {
+                    'S'
+                } else if is_last_row && is_last_col {
+                    'F'
+                } else {
+                    ' '
+                };
+                row_str.push_str(&format!("  {center_char}  "));
+                row_str.push(if cell.can_exit_east { ' ' } else { '│' });
+            }
+            row_str.push('\n');
+            maze_str.push_str(&row_str);
+            maze_str.push_str(&row_str);
+
+            // Generate the border below the cell.
             maze_str.push(if is_last_row { '└' } else { '├' });
             for (j, cell) in row.iter().enumerate() {
                 let is_last_cell = j == row.len() - 1;
 
-                maze_str.push(if cell.can_exit_south { ' ' } else { '─' });
+                maze_str.push_str(if cell.can_exit_south {
+                    "     "
+                } else {
+                    "─────"
+                });
                 maze_str.push(if is_last_row {
                     if is_last_cell {
                         '┘'
