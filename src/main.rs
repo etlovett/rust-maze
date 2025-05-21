@@ -11,18 +11,29 @@ struct Location {
 }
 
 #[derive(Debug)]
+struct MazeSize {
+    width: Size,
+    height: Size,
+}
+
+#[derive(Debug)]
 struct Cell {
+    maze_size: MazeSize,
     location: Location,
     can_exit_south: bool,
     can_exit_east: bool,
 }
 
-#[derive(Debug)]
-struct Maze {
-    cells: Vec<Vec<Cell>>,
-}
+impl Cell {
+    fn new(x: Size, y: Size, width: Size, height: Size) -> Cell {
+        Cell {
+            maze_size: MazeSize { width, height },
+            location: Location { x, y },
+            can_exit_south: Cell::get_can_exit(y, height),
+            can_exit_east: Cell::get_can_exit(x, width),
+        }
+    }
 
-impl Maze {
     fn get_can_exit(x_or_y: Size, width_or_height: Size) -> bool {
         if x_or_y < width_or_height - 1 {
             random_bool(0.5)
@@ -31,23 +42,64 @@ impl Maze {
         }
     }
 
-    fn new(width: Size, height: Size) -> Maze {
-        let mut cells = Vec::new();
-        for y in 0..height {
-            let mut row = Vec::new();
-            for x in 0..width {
-                row.push(Cell {
-                    location: Location { x, y },
-                    can_exit_south: Maze::get_can_exit(y, height),
-                    can_exit_east: Maze::get_can_exit(x, width),
-                })
-            }
-            cells.push(row);
+    fn is_first_in_row(&self) -> bool {
+        self.location.x == 0
+    }
+
+    fn is_last_in_row(&self) -> bool {
+        self.location.x == self.maze_size.width - 1
+    }
+
+    fn is_first_in_col(&self) -> bool {
+        self.location.y == 0
+    }
+
+    fn is_last_in_col(&self) -> bool {
+        self.location.y == self.maze_size.height - 1
+    }
+
+    fn is_start(&self) -> bool {
+        self.is_first_in_row() && self.is_first_in_col()
+    }
+
+    fn is_finish(&self) -> bool {
+        self.is_last_in_row() && self.is_last_in_col()
+    }
+
+    fn get_center_char(&self) -> char {
+        if self.is_start() {
+            'S'
+        } else if self.is_finish() {
+            'F'
+        } else {
+            ' '
         }
+    }
+}
+
+#[derive(Debug)]
+struct Maze {
+    size: MazeSize,
+    cells: Vec<Vec<Cell>>,
+}
+
+impl Maze {
+    fn new(width: Size, height: Size) -> Maze {
+        let cells = (0..height)
+            .map(|y| {
+                let row = (0..width)
+                    .map(|x| Cell::new(x, y, width, height))
+                    .collect::<Vec<_>>();
+                row
+            })
+            .collect::<Vec<_>>();
 
         // TODO(eric): edit the maze to actually have a solution
         // TODO(eric): make sure every cell in the maze has at least one entrance/exit
-        Maze { cells }
+        Maze {
+            cells,
+            size: MazeSize { width, height },
+        }
     }
 
     fn as_str(&self) -> String {
@@ -55,8 +107,8 @@ impl Maze {
 
         // Generate first line border.
         maze_str.push('╔');
-        for (i, _) in self.cells[0].iter().enumerate() {
-            let is_last_cell = i == self.cells[0].len() - 1;
+        for i in 0..self.size.width {
+            let is_last_cell = i == self.size.width - 1;
 
             maze_str.push_str("═════");
             maze_str.push(if is_last_cell { '╗' } else { '╦' });
@@ -66,23 +118,11 @@ impl Maze {
         for (i, row) in self.cells.iter().enumerate() {
             let is_last_row = i == self.cells.len() - 1;
 
-            // Generate the body of each cell.
+            // Generate the body of each cell for the row, including left and right borders.
             let mut row_str = String::new();
             row_str.push('║');
-            for (j, cell) in row.iter().enumerate() {
-                let is_first_row = i == 0;
-                let is_first_col = j == 0;
-                let is_last_row = i == self.cells.len() - 1;
-                let is_last_col = j == row.len() - 1;
-
-                let center_char = if is_first_row && is_first_col {
-                    'S'
-                } else if is_last_row && is_last_col {
-                    'F'
-                } else {
-                    ' '
-                };
-                row_str.push_str(&format!("  {center_char}  "));
+            for cell in row {
+                row_str.push_str(&format!("  {}  ", cell.get_center_char()));
                 row_str.push(if cell.can_exit_east { ' ' } else { '║' });
             }
             row_str.push('\n');
@@ -91,26 +131,20 @@ impl Maze {
 
             // Generate the border below the cell.
             maze_str.push(if is_last_row { '╚' } else { '╠' });
-            for (j, cell) in row.iter().enumerate() {
-                let is_last_cell = j == row.len() - 1;
-
+            for cell in row {
                 maze_str.push_str(if cell.can_exit_south {
                     "     "
                 } else {
                     "═════"
                 });
-                maze_str.push(if is_last_row {
-                    if is_last_cell {
-                        '╝'
-                    } else {
-                        '╩'
-                    }
+                maze_str.push(if cell.is_last_in_row() && cell.is_last_in_col() {
+                    '╝'
+                } else if cell.is_last_in_row() {
+                    '╣'
+                } else if cell.is_last_in_col() {
+                    '╩'
                 } else {
-                    if is_last_cell {
-                        '╣'
-                    } else {
-                        '╬'
-                    }
+                    '╬'
                 });
             }
             maze_str.push('\n');
