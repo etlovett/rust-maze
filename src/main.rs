@@ -1,10 +1,11 @@
 use rand::random_bool;
-use rand::random_range;
+use rand::seq::SliceRandom;
 use std::fmt;
 use std::io;
 
 type Size = usize;
 
+#[derive(Debug, Copy, Clone)]
 enum Direction {
     North,
     East,
@@ -54,6 +55,9 @@ impl PartialEq for Location {
 }
 
 impl Cell {
+    /**
+     * Generate a new cell.
+     */
     fn new(x: Size, y: Size, width: Size, height: Size) -> Cell {
         Cell {
             maze_size: MazeSize { width, height },
@@ -65,7 +69,7 @@ impl Cell {
 
     fn get_can_exit(x_or_y: Size, width_or_height: Size) -> bool {
         if x_or_y < width_or_height - 1 {
-            random_bool(0.5)
+            random_bool(0.35)
         } else {
             false
         }
@@ -107,6 +111,9 @@ impl Cell {
 }
 
 impl Maze {
+    /**
+     * Generate a new valid maze.
+     */
     fn new(width: Size, height: Size) -> Maze {
         let cells = (0..height)
             .map(|y| {
@@ -126,32 +133,105 @@ impl Maze {
     }
 
     fn make_valid(&mut self) {
-        for y in 0..self.size.height {
-            for x in 0..self.size.width {
-                // While the cell at (x, y) does not have any valid moves, try to open a random direction.
-                while self.get_valid_moves(&self.cells[y][x]).len() == 0 {
-                    let direction_to_open = &ALL_DIRECTIONS[random_range(0..ALL_DIRECTIONS.len())];
-                    let (cell_to_edit_x, cell_to_edit_y) = match direction_to_open {
-                        Direction::North if y > 0 => (x, y - 1),
-                        Direction::East if x + 1 < self.size.width => (x, y),
-                        Direction::South if y + 1 < self.size.height => (x, y),
-                        Direction::West if x > 0 => (x - 1, y),
-                        _ => continue,
-                    };
+        loop {
+            let visited_map = self.generate_visitable_map();
+            let has_disconnected_cell = visited_map.iter().flatten().any(|&is_visited| !is_visited);
+            if !has_disconnected_cell {
+                break;
+            }
 
-                    match direction_to_open {
-                        Direction::North | Direction::South => {
-                            self.cells[cell_to_edit_y][cell_to_edit_x].can_exit_south = true;
+            // Find a disconnected location adjacent to a connected one.
+            let disconnected_location = visited_map.iter().enumerate().find_map(|(y, row)| {
+                row.iter().enumerate().find_map(|(x, &is_visited)| {
+                    if is_visited {
+                        return None;
+                    }
+
+                    // Check if this cell has any adjacent connected cells.
+                    let location = Location { x, y };
+                    let has_adjacent_connected_location = ALL_DIRECTIONS.iter().any(|dir| {
+                        self.get_location(&location, dir)
+                            .map(|adjacent_location| {
+                                visited_map[adjacent_location.y][adjacent_location.x]
+                            })
+                            .unwrap_or(false)
+                    });
+
+                    if has_adjacent_connected_location {
+                        Some(location)
+                    } else {
+                        None
+                    }
+                })
+            });
+
+            if disconnected_location.is_none() {
+                println!("Should have found a disconnected cell, but didn't!");
+                break;
+            }
+
+            // Open the found cell to an adjacent connected cell.
+            let location = disconnected_location.unwrap();
+            let mut opened = false;
+            // Shuffle the directions to randomize the direction we open.
+            let mut shuffled_directions = ALL_DIRECTIONS.to_vec();
+            shuffled_directions.shuffle(&mut rand::rng());
+            for dir in shuffled_directions.iter() {
+                if let Some(adjacent_location) = self.get_location(&location, dir) {
+                    if visited_map[adjacent_location.y][adjacent_location.x] {
+                        // Open the direction from the disconnected location to the adjacent connected location.
+                        match dir {
+                            Direction::North => {
+                                self.cells[adjacent_location.y][adjacent_location.x]
+                                    .can_exit_south = true;
+                            }
+                            Direction::East => {
+                                self.cells[location.y][location.x].can_exit_east = true;
+                            }
+                            Direction::South => {
+                                self.cells[location.y][location.x].can_exit_south = true;
+                            }
+                            Direction::West => {
+                                self.cells[adjacent_location.y][adjacent_location.x]
+                                    .can_exit_east = true;
+                            }
                         }
-                        Direction::East | Direction::West => {
-                            self.cells[cell_to_edit_y][cell_to_edit_x].can_exit_east = true;
-                        }
+                        opened = true;
+                        break; // Exit the loop after opening one direction.
+                    }
+                }
+            }
+            if !opened {
+                println!(
+                    "Failed to open a direction for a disconnected cell at {} {}.",
+                    location.x, location.y
+                );
+                break;
+            }
+        }
+    }
+
+    fn generate_visitable_map(&self) -> Vec<Vec<bool>> {
+        let mut visited_map = vec![vec![false; self.size.width]; self.size.height];
+
+        // Flood fill via DFS from the start cell.
+        fn dfs(maze: &Maze, location: &Location, visited: &mut Vec<Vec<bool>>) {
+            if visited[location.y][location.x] {
+                return;
+            }
+            visited[location.y][location.x] = true;
+            let cell = &maze.cells[location.y][location.x];
+            for dir in ALL_DIRECTIONS.iter() {
+                if maze.can_move(cell, dir) {
+                    if let Some(next_location) = maze.get_location(&cell.location, dir) {
+                        dfs(maze, &next_location, visited);
                     }
                 }
             }
         }
+        dfs(self, &Location { x: 0, y: 0 }, &mut visited_map);
 
-        // TODO(eric): edit the maze to actually have a solution
+        visited_map
     }
 
     fn as_str(&self) -> String {
@@ -205,6 +285,9 @@ impl Maze {
         maze_str
     }
 
+    /**
+     * Produce a solution path for the maze, if one exists.
+     */
     fn solve(&self) -> Option<Path> {
         let start_cell = &self.cells[0][0];
         let mut path = Vec::new();
