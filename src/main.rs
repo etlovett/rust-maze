@@ -296,9 +296,9 @@ fn get_size(dimension: &str) -> Size {
             .read_line(&mut size)
             .expect("Failed to read line");
         match size.trim().parse() {
-            Ok(num) => return num,
-            Err(_) => {
-                println!("Please enter a valid number.");
+            Ok(num) if num >= 2 => return num,
+            _ => {
+                println!("Please enter a valid u8 number >=2.");
                 continue;
             }
         };
