@@ -415,4 +415,6 @@ fn main() {
 
     let solution = maze.solve();
     println!("{solution:#?}");
+
+    // TODO(eric): Print the maze with the solution path embedded
 }
