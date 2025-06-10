@@ -131,26 +131,20 @@ impl Maze {
                 // While the cell at (x, y) does not have any valid moves, try to open a random direction.
                 while self.get_valid_moves(&self.cells[y][x]).len() == 0 {
                     let direction_to_open = &ALL_DIRECTIONS[random_range(0..ALL_DIRECTIONS.len())];
-                    let (nx, ny) = match direction_to_open {
+                    let (cell_to_edit_x, cell_to_edit_y) = match direction_to_open {
                         Direction::North if y > 0 => (x, y - 1),
-                        Direction::East if x + 1 < self.size.width => (x + 1, y),
-                        Direction::South if y + 1 < self.size.height => (x, y + 1),
+                        Direction::East if x + 1 < self.size.width => (x, y),
+                        Direction::South if y + 1 < self.size.height => (x, y),
                         Direction::West if x > 0 => (x - 1, y),
                         _ => continue,
                     };
 
                     match direction_to_open {
-                        Direction::North => {
-                            self.cells[ny][nx].can_exit_south = true;
+                        Direction::North | Direction::South => {
+                            self.cells[cell_to_edit_y][cell_to_edit_x].can_exit_south = true;
                         }
-                        Direction::East => {
-                            self.cells[y][x].can_exit_east = true;
-                        }
-                        Direction::South => {
-                            self.cells[y][x].can_exit_south = true;
-                        }
-                        Direction::West => {
-                            self.cells[ny][nx].can_exit_east = true;
+                        Direction::East | Direction::West => {
+                            self.cells[cell_to_edit_y][cell_to_edit_x].can_exit_east = true;
                         }
                     }
                 }
@@ -212,7 +206,7 @@ impl Maze {
     }
 
     fn solve(&self) -> Option<Path> {
-        let start_cell = self.get_cell_at(&Location { x: 0, y: 0 });
+        let start_cell = &self.cells[0][0];
         let mut path = Vec::new();
         return if self.solve_helper(start_cell, &mut path) {
             Some(path)
@@ -250,9 +244,14 @@ impl Maze {
     fn get_valid_moves(&self, cur_cell: &Cell) -> Vec<&Cell> {
         ALL_DIRECTIONS
             .iter()
-            .filter(|dir| self.can_move(cur_cell, dir))
-            .filter_map(|dir| self.get_cell_in(cur_cell, dir))
-            .collect::<Vec<_>>()
+            .filter_map(|dir| {
+                if self.can_move(cur_cell, dir) {
+                    self.get_cell_in(cur_cell, dir)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     fn can_move(&self, cur_cell: &Cell, direction: &Direction) -> bool {
@@ -272,56 +271,29 @@ impl Maze {
 
     fn get_location(&self, cur_location: &Location, direction: &Direction) -> Option<Location> {
         match direction {
-            Direction::North => {
-                if cur_location.y >= 1 {
-                    Some(Location {
-                        x: cur_location.x,
-                        y: cur_location.y - 1,
-                    })
-                } else {
-                    None
-                }
-            }
-            Direction::East => {
-                if cur_location.x < self.size.width - 1 {
-                    Some(Location {
-                        x: cur_location.x + 1,
-                        y: cur_location.y,
-                    })
-                } else {
-                    None
-                }
-            }
-            Direction::South => {
-                if cur_location.y < self.size.height - 1 {
-                    Some(Location {
-                        x: cur_location.x,
-                        y: cur_location.y + 1,
-                    })
-                } else {
-                    None
-                }
-            }
-            Direction::West => {
-                if cur_location.x >= 1 {
-                    Some(Location {
-                        x: cur_location.x - 1,
-                        y: cur_location.y,
-                    })
-                } else {
-                    None
-                }
-            }
+            Direction::North if cur_location.y >= 1 => Some(Location {
+                x: cur_location.x,
+                y: cur_location.y - 1,
+            }),
+            Direction::East if cur_location.x < self.size.width - 1 => Some(Location {
+                x: cur_location.x + 1,
+                y: cur_location.y,
+            }),
+            Direction::South if cur_location.y < self.size.height - 1 => Some(Location {
+                x: cur_location.x,
+                y: cur_location.y + 1,
+            }),
+            Direction::West if cur_location.x >= 1 => Some(Location {
+                x: cur_location.x - 1,
+                y: cur_location.y,
+            }),
+            _ => None,
         }
-    }
-
-    fn get_cell_at(&self, location: &Location) -> &Cell {
-        &self.cells[usize::from(location.y)][usize::from(location.x)]
     }
 
     fn get_cell_in(&self, cur_cell: &Cell, direction: &Direction) -> Option<&Cell> {
         self.get_location(&cur_cell.location, direction)
-            .map(|new_location| self.get_cell_at(&new_location))
+            .map(|new_location| &self.cells[new_location.y][new_location.x])
     }
 }
 
