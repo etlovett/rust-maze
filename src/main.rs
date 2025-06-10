@@ -1,27 +1,48 @@
 use rand::random_bool;
+use rand::random_range;
 use std::fmt;
 use std::io;
 
-type Size = u8;
+type Size = usize;
 
-#[derive(Debug)]
+enum Direction {
+    North,
+    East,
+    South,
+    West,
+}
+
+const ALL_DIRECTIONS: [Direction; 4] = [
+    Direction::North,
+    Direction::East,
+    Direction::South,
+    Direction::West,
+];
+
+#[derive(Debug, Copy, Clone)]
 struct Location {
     x: Size,
     y: Size,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct MazeSize {
     width: Size,
     height: Size,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct Cell {
     maze_size: MazeSize,
     location: Location,
     can_exit_south: bool,
     can_exit_east: bool,
+}
+
+#[derive(Debug)]
+struct Maze {
+    size: MazeSize,
+    cells: Vec<Vec<Cell>>,
 }
 
 impl Cell {
@@ -77,12 +98,6 @@ impl Cell {
     }
 }
 
-#[derive(Debug)]
-struct Maze {
-    size: MazeSize,
-    cells: Vec<Vec<Cell>>,
-}
-
 impl Maze {
     fn new(width: Size, height: Size) -> Maze {
         let cells = (0..height)
@@ -94,12 +109,47 @@ impl Maze {
             })
             .collect::<Vec<_>>();
 
-        // TODO(eric): edit the maze to actually have a solution
-        // TODO(eric): make sure every cell in the maze has at least one entrance/exit
-        Maze {
+        let mut maze = Maze {
             cells,
             size: MazeSize { width, height },
+        };
+        maze.make_valid();
+        maze
+    }
+
+    fn make_valid(&mut self) {
+        for y in 0..self.size.height {
+            for x in 0..self.size.width {
+                // While the cell at (x, y) does not have any valid moves, try to open a random direction.
+                while self.get_valid_moves(&self.cells[y][x]).len() == 0 {
+                    let direction_to_open = &ALL_DIRECTIONS[random_range(0..ALL_DIRECTIONS.len())];
+                    let (nx, ny) = match direction_to_open {
+                        Direction::North if y > 0 => (x, y - 1),
+                        Direction::East if x + 1 < self.size.width => (x + 1, y),
+                        Direction::South if y + 1 < self.size.height => (x, y + 1),
+                        Direction::West if x > 0 => (x - 1, y),
+                        _ => continue,
+                    };
+
+                    match direction_to_open {
+                        Direction::North => {
+                            self.cells[ny][nx].can_exit_south = true;
+                        }
+                        Direction::East => {
+                            self.cells[y][x].can_exit_east = true;
+                        }
+                        Direction::South => {
+                            self.cells[y][x].can_exit_south = true;
+                        }
+                        Direction::West => {
+                            self.cells[ny][nx].can_exit_east = true;
+                        }
+                    }
+                }
+            }
         }
+
+        // TODO(eric): edit the maze to actually have a solution
     }
 
     fn as_str(&self) -> String {
@@ -152,6 +202,83 @@ impl Maze {
 
         maze_str
     }
+
+    fn get_valid_moves(&self, cur_cell: &Cell) -> Vec<&Cell> {
+        ALL_DIRECTIONS
+            .iter()
+            .filter(|dir| self.can_move(cur_cell, dir))
+            .filter_map(|dir| self.get_cell_in(cur_cell, dir))
+            .collect::<Vec<_>>()
+    }
+
+    fn can_move(&self, cur_cell: &Cell, direction: &Direction) -> bool {
+        match direction {
+            Direction::North => self
+                .get_cell_in(cur_cell, &Direction::North)
+                .map(|north_cell| north_cell.can_exit_south)
+                .unwrap_or(false),
+            Direction::East => cur_cell.can_exit_east,
+            Direction::South => cur_cell.can_exit_south,
+            Direction::West => self
+                .get_cell_in(cur_cell, &Direction::West)
+                .map(|west_cell| west_cell.can_exit_east)
+                .unwrap_or(false),
+        }
+    }
+
+    fn get_location(&self, cur_location: &Location, direction: &Direction) -> Option<Location> {
+        match direction {
+            Direction::North => {
+                if cur_location.y >= 1 {
+                    Some(Location {
+                        x: cur_location.x,
+                        y: cur_location.y - 1,
+                    })
+                } else {
+                    None
+                }
+            }
+            Direction::East => {
+                if cur_location.x < self.size.width - 1 {
+                    Some(Location {
+                        x: cur_location.x + 1,
+                        y: cur_location.y,
+                    })
+                } else {
+                    None
+                }
+            }
+            Direction::South => {
+                if cur_location.y < self.size.height - 1 {
+                    Some(Location {
+                        x: cur_location.x,
+                        y: cur_location.y + 1,
+                    })
+                } else {
+                    None
+                }
+            }
+            Direction::West => {
+                if cur_location.x >= 1 {
+                    Some(Location {
+                        x: cur_location.x - 1,
+                        y: cur_location.y,
+                    })
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    fn get_cell_at(&self, location: &Location) -> &Cell {
+        &self.cells[usize::from(location.y)][usize::from(location.x)]
+    }
+
+    fn get_cell_in(&self, cur_cell: &Cell, direction: &Direction) -> Option<&Cell> {
+        self.get_location(&cur_cell.location, direction)
+            .map(|new_location| self.get_cell_at(&new_location))
+    }
 }
 
 impl fmt::Display for Maze {
@@ -185,5 +312,5 @@ fn main() {
 
     let maze = Maze::new(width, height);
 
-    println!("{}", maze.to_string())
+    println!("{}", maze.to_string());
 }
