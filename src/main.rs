@@ -45,6 +45,14 @@ struct Maze {
     cells: Vec<Vec<Cell>>,
 }
 
+type Path = Vec<Location>;
+
+impl PartialEq for Location {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
 impl Cell {
     fn new(x: Size, y: Size, width: Size, height: Size) -> Cell {
         Cell {
@@ -203,6 +211,42 @@ impl Maze {
         maze_str
     }
 
+    fn solve(&self) -> Option<Path> {
+        let start_cell = self.get_cell_at(&Location { x: 0, y: 0 });
+        let mut path = Vec::new();
+        return if self.solve_helper(start_cell, &mut path) {
+            Some(path)
+        } else {
+            None
+        };
+    }
+
+    fn solve_helper(&self, cur_cell: &Cell, path_to_here: &mut Path) -> bool {
+        // Now that we're visiting this cell, add it to the path.
+        path_to_here.push(cur_cell.location);
+
+        if cur_cell.is_finish() {
+            return true;
+        }
+
+        // Collect all valid moves, avoiding cycles by filtering out cells already in the path.
+        let valid_moves = self
+            .get_valid_moves(cur_cell)
+            .into_iter()
+            .filter(|cell| !path_to_here.contains(&cell.location))
+            .collect::<Vec<_>>();
+        for next_cell in valid_moves {
+            if self.solve_helper(next_cell, path_to_here) {
+                // If we find a solution, return. We've already added this cell to the path.
+                return true;
+            }
+        }
+
+        // If we didn't find a solution from this cell, backtrack.
+        path_to_here.pop();
+        false
+    }
+
     fn get_valid_moves(&self, cur_cell: &Cell) -> Vec<&Cell> {
         ALL_DIRECTIONS
             .iter()
@@ -313,4 +357,7 @@ fn main() {
     let maze = Maze::new(width, height);
 
     println!("{}", maze.to_string());
+
+    let solution = maze.solve();
+    println!("{solution:#?}");
 }
