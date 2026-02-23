@@ -79,6 +79,44 @@ fn can_move_between_rejects_out_of_bounds_and_invalid_moves() {
 }
 
 #[test]
+fn can_move_between_is_symmetric_for_adjacent_cells() {
+    let maze = Maze::new(8, 6);
+    let (width, height) = maze.size();
+
+    for y in 0..height {
+        for x in 0..width {
+            let from = Location { x, y };
+
+            let adjacent = [
+                Location {
+                    x: x.saturating_sub(1),
+                    y,
+                },
+                Location { x: x + 1, y },
+                Location {
+                    x,
+                    y: y.saturating_sub(1),
+                },
+                Location { x, y: y + 1 },
+            ];
+
+            for to in adjacent {
+                if to.x >= width || to.y >= height {
+                    continue;
+                }
+                assert_eq!(
+                    maze.can_move_between(from, to),
+                    maze.can_move_between(to, from),
+                    "can_move_between should be symmetric for adjacent cells: {:?} <-> {:?}",
+                    from,
+                    to
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn topology_api_validates_boundaries_and_connectivity() {
     for (width, height) in [(2, 2), (4, 4), (8, 6)] {
         let maze = Maze::new(width, height);

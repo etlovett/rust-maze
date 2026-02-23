@@ -1,4 +1,4 @@
-use maze::Maze;
+use maze::{Location, Maze};
 
 #[test]
 fn from_topology_renders_exact_output_for_2x2_fixture() {
@@ -66,6 +66,24 @@ fn from_topology_rejects_matrix_shape_mismatch() {
     )
     .expect_err("east_open row with wrong width should be rejected");
     assert!(err.contains("east_open row 0 must have length 3"));
+
+    let err = Maze::from_topology(
+        3,
+        2,
+        vec![vec![false, false, false], vec![false, false, false]],
+        vec![vec![false, false, false]],
+    )
+    .expect_err("south_open with wrong height should be rejected");
+    assert!(err.contains("south_open must have one row per maze row"));
+
+    let err = Maze::from_topology(
+        3,
+        2,
+        vec![vec![false, false, false], vec![false, false, false]],
+        vec![vec![false, false], vec![false, false, false]],
+    )
+    .expect_err("south_open row with wrong width should be rejected");
+    assert!(err.contains("south_open row 0 must have length 3"));
 }
 
 #[test]
@@ -98,4 +116,32 @@ fn from_topology_rejects_disconnected_cells() {
         .expect_err("disconnected topology should be rejected");
 
     assert!(err.contains("maze must be fully connected from start"));
+}
+
+#[test]
+fn from_topology_solver_matches_known_fixture_path_shape() {
+    let east_open = vec![vec![true, false], vec![false, false]];
+    let south_open = vec![vec![true, true], vec![false, false]];
+    let maze = Maze::from_topology(2, 2, east_open, south_open)
+        .expect("fixture topology should be valid and connected");
+
+    let path = maze.solve().expect("solver should return a path");
+    let expected = vec![
+        Location { x: 0, y: 0 },
+        Location { x: 1, y: 0 },
+        Location { x: 1, y: 1 },
+    ];
+
+    assert_eq!(path, expected);
+    assert_eq!(path.first().copied(), Some(Location { x: 0, y: 0 }));
+    assert_eq!(path.last().copied(), Some(Location { x: 1, y: 1 }));
+
+    for pair in path.windows(2) {
+        assert!(
+            maze.can_move_between(pair[0], pair[1]),
+            "expected traversable step in known fixture: {:?} -> {:?}",
+            pair[0],
+            pair[1]
+        );
+    }
 }

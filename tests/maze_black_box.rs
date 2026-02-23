@@ -16,6 +16,10 @@ struct MazeRender {
 }
 
 fn run_maze(width: usize, height: usize) -> String {
+    run_maze_with_input(&format!("{width}\n{height}\n"))
+}
+
+fn run_maze_with_input(input: &str) -> String {
     let bin = env!("CARGO_BIN_EXE_maze");
     let mut child = Command::new(bin)
         .stdin(Stdio::piped())
@@ -26,7 +30,7 @@ fn run_maze(width: usize, height: usize) -> String {
 
     {
         let stdin = child.stdin.as_mut().expect("failed to get stdin");
-        write!(stdin, "{width}\n{height}\n").expect("failed to write stdin");
+        write!(stdin, "{input}").expect("failed to write stdin");
     }
 
     let output = child
@@ -300,4 +304,26 @@ fn solver_path_is_bounded_adjacent_and_traversable() {
             );
         }
     }
+}
+
+#[test]
+fn cli_reprompts_after_non_numeric_width_input() {
+    let stdout = run_maze_with_input("abc\n2\n2\n");
+
+    assert!(stdout.contains("Please enter a valid u8 number >=2."));
+    assert_eq!(stdout.matches("Please enter the width.").count(), 2);
+    assert_eq!(stdout.matches("Please enter the height.").count(), 1);
+    assert!(stdout.contains("Creating a maze of size 2x2."));
+    assert!(stdout.contains("Some("));
+}
+
+#[test]
+fn cli_reprompts_after_too_small_height_input() {
+    let stdout = run_maze_with_input("2\n1\n2\n");
+
+    assert!(stdout.contains("Please enter a valid u8 number >=2."));
+    assert_eq!(stdout.matches("Please enter the width.").count(), 1);
+    assert_eq!(stdout.matches("Please enter the height.").count(), 2);
+    assert!(stdout.contains("Creating a maze of size 2x2."));
+    assert!(stdout.contains("Some("));
 }
