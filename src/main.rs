@@ -117,10 +117,9 @@ impl Maze {
     fn new(width: Size, height: Size) -> Maze {
         let cells = (0..height)
             .map(|y| {
-                let row = (0..width)
+                (0..width)
                     .map(|x| Cell::new(x, y, width, height))
-                    .collect::<Vec<_>>();
-                row
+                    .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
 
@@ -291,11 +290,11 @@ impl Maze {
     fn solve(&self) -> Option<Path> {
         let start_cell = &self.cells[0][0];
         let mut path = Vec::new();
-        return if self.solve_helper(start_cell, &mut path) {
+        if self.solve_helper(start_cell, &mut path) {
             Some(path)
         } else {
             None
-        };
+        }
     }
 
     fn solve_helper(&self, cur_cell: &Cell, path_to_here: &mut Path) -> bool {
@@ -411,7 +410,7 @@ fn main() {
 
     let maze = Maze::new(width, height);
 
-    println!("{}", maze.to_string());
+    println!("{}", maze);
 
     let solution = maze.solve();
     println!("{solution:#?}");
