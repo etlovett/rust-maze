@@ -48,6 +48,13 @@ fn from_topology_rejects_bad_dimensions() {
 }
 
 #[test]
+fn from_topology_rejects_height_below_minimum() {
+    let err = Maze::from_topology(2, 1, vec![vec![false, false]], vec![vec![false, false]])
+        .expect_err("height < 2 should be rejected");
+    assert!(err.contains("width and height must be >= 2"));
+}
+
+#[test]
 fn from_topology_rejects_matrix_shape_mismatch() {
     let err = Maze::from_topology(
         3,
@@ -105,6 +112,40 @@ fn from_topology_rejects_open_boundaries() {
     )
     .expect_err("open bottom boundary should be rejected");
     assert!(err.contains("south_open bottom boundary must be closed at column 0"));
+
+    let err = Maze::from_topology(
+        3,
+        3,
+        vec![
+            vec![false, false, false],
+            vec![false, false, true],
+            vec![false, false, false],
+        ],
+        vec![
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, false, false],
+        ],
+    )
+    .expect_err("open right boundary on non-zero row should be rejected");
+    assert!(err.contains("east_open right boundary must be closed at row 1"));
+
+    let err = Maze::from_topology(
+        3,
+        3,
+        vec![
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, false, false],
+        ],
+        vec![
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, true, false],
+        ],
+    )
+    .expect_err("open bottom boundary on non-zero column should be rejected");
+    assert!(err.contains("south_open bottom boundary must be closed at column 1"));
 }
 
 #[test]
@@ -142,6 +183,35 @@ fn from_topology_solver_matches_known_fixture_path_shape() {
             "expected traversable step in known fixture: {:?} -> {:?}",
             pair[0],
             pair[1]
+        );
+    }
+}
+
+#[test]
+fn from_topology_solver_validates_connected_2x3_fixture() {
+    let east_open = vec![vec![true, false], vec![true, false], vec![true, false]];
+    let south_open = vec![vec![false, true], vec![false, true], vec![false, false]];
+    let maze = Maze::from_topology(2, 3, east_open, south_open)
+        .expect("fixture topology should be valid and connected");
+
+    let path = maze.solve().expect("solver should return a path");
+    assert_eq!(path.first().copied(), Some(Location { x: 0, y: 0 }));
+    assert_eq!(path.last().copied(), Some(Location { x: 1, y: 2 }));
+
+    for pair in path.windows(2) {
+        let a = pair[0];
+        let b = pair[1];
+        let manhattan = a.x.abs_diff(b.x) + a.y.abs_diff(b.y);
+        assert_eq!(
+            manhattan, 1,
+            "path step must be adjacent: {:?} -> {:?}",
+            a, b
+        );
+        assert!(
+            maze.can_move_between(a, b),
+            "expected traversable step in 2x3 fixture: {:?} -> {:?}",
+            a,
+            b
         );
     }
 }

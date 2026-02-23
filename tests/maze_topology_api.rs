@@ -79,6 +79,12 @@ fn can_move_between_rejects_out_of_bounds_and_invalid_moves() {
 }
 
 #[test]
+fn can_move_between_rejects_non_adjacent_vertical_jump() {
+    let maze = Maze::new(4, 4);
+    assert!(!maze.can_move_between(Location { x: 1, y: 0 }, Location { x: 1, y: 2 }));
+}
+
+#[test]
 fn can_move_between_is_symmetric_for_adjacent_cells() {
     let maze = Maze::new(8, 6);
     let (width, height) = maze.size();

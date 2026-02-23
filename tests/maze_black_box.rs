@@ -327,3 +327,14 @@ fn cli_reprompts_after_too_small_height_input() {
     assert!(stdout.contains("Creating a maze of size 2x2."));
     assert!(stdout.contains("Some("));
 }
+
+#[test]
+fn cli_reprompts_after_too_small_width_input() {
+    let stdout = run_maze_with_input("1\n2\n2\n");
+
+    assert!(stdout.contains("Please enter a valid u8 number >=2."));
+    assert_eq!(stdout.matches("Please enter the width.").count(), 2);
+    assert_eq!(stdout.matches("Please enter the height.").count(), 1);
+    assert!(stdout.contains("Creating a maze of size 2x2."));
+    assert!(stdout.contains("Some("));
+}
