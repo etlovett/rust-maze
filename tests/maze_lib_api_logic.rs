@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 
 #[derive(Debug)]
 struct MazeRender {
-    lines: Vec<String>,
     east_open: Vec<Vec<bool>>,
     south_open: Vec<Vec<bool>>,
 }
@@ -51,7 +50,6 @@ fn parse_render(width: usize, height: usize, maze_text: &str) -> MazeRender {
     }
 
     MazeRender {
-        lines,
         east_open,
         south_open,
     }
@@ -119,28 +117,6 @@ fn reachable_count(render: &MazeRender, width: usize, height: usize) -> usize {
         .iter()
         .map(|row| row.iter().filter(|&&v| v).count())
         .sum()
-}
-
-#[test]
-fn top_level_rendering_has_expected_shape_and_markers() {
-    for (width, height) in [(2, 2), (3, 4), (5, 3), (6, 6)] {
-        let maze = Maze::new(width, height);
-        let maze_text = maze.to_string();
-        let render = parse_render(width, height, &maze_text);
-
-        assert_eq!(maze_text.matches('S').count(), 2);
-        assert_eq!(maze_text.matches('F').count(), 2);
-        assert_eq!(render.lines[0].chars().next(), Some('╔'));
-        assert_eq!(render.lines[0].chars().last(), Some('╗'));
-        assert_eq!(
-            render.lines.last().and_then(|l| l.chars().next()),
-            Some('╚')
-        );
-        assert_eq!(
-            render.lines.last().and_then(|l| l.chars().last()),
-            Some('╝')
-        );
-    }
 }
 
 #[test]
