@@ -124,6 +124,75 @@ impl Maze {
         maze
     }
 
+    pub fn from_topology(
+        width: usize,
+        height: usize,
+        east_open: Vec<Vec<bool>>,
+        south_open: Vec<Vec<bool>>,
+    ) -> Result<Maze, String> {
+        if width < 2 || height < 2 {
+            return Err("width and height must be >= 2".to_string());
+        }
+
+        if east_open.len() != height {
+            return Err("east_open must have one row per maze row".to_string());
+        }
+        if south_open.len() != height {
+            return Err("south_open must have one row per maze row".to_string());
+        }
+
+        for (y, row) in east_open.iter().enumerate() {
+            if row.len() != width {
+                return Err(format!("east_open row {y} must have length {width}"));
+            }
+        }
+        for (y, row) in south_open.iter().enumerate() {
+            if row.len() != width {
+                return Err(format!("south_open row {y} must have length {width}"));
+            }
+        }
+
+        for (y, row) in east_open.iter().enumerate() {
+            if row[width - 1] {
+                return Err(format!(
+                    "east_open right boundary must be closed at row {y}"
+                ));
+            }
+        }
+        for x in 0..width {
+            if south_open[height - 1][x] {
+                return Err(format!(
+                    "south_open bottom boundary must be closed at column {x}"
+                ));
+            }
+        }
+
+        let maze_size = MazeSize { width, height };
+        let cells = (0..height)
+            .map(|y| {
+                (0..width)
+                    .map(|x| Cell {
+                        maze_size,
+                        location: Location { x, y },
+                        can_exit_south: south_open[y][x],
+                        can_exit_east: east_open[y][x],
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+
+        let maze = Maze {
+            size: maze_size,
+            cells,
+        };
+
+        if !maze.is_fully_connected() {
+            return Err("maze must be fully connected from start".to_string());
+        }
+
+        Ok(maze)
+    }
+
     pub fn size(&self) -> (usize, usize) {
         (self.size.width, self.size.height)
     }
@@ -249,6 +318,13 @@ impl Maze {
         dfs(self, &Location { x: 0, y: 0 }, &mut visited_map);
 
         visited_map
+    }
+
+    fn is_fully_connected(&self) -> bool {
+        self.generate_visitable_map()
+            .iter()
+            .flatten()
+            .all(|&is_visited| is_visited)
     }
 
     fn as_str(&self) -> String {
