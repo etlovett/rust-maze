@@ -124,6 +124,31 @@ impl Maze {
         maze
     }
 
+    pub fn size(&self) -> (usize, usize) {
+        (self.size.width, self.size.height)
+    }
+
+    pub fn can_move_between(&self, from: Location, to: Location) -> bool {
+        if !self.is_in_bounds(from) || !self.is_in_bounds(to) {
+            return false;
+        }
+
+        if from.x == to.x && from.y + 1 == to.y {
+            return self.can_move(&self.cells[from.y][from.x], &Direction::South);
+        }
+        if from.x == to.x && from.y == to.y + 1 {
+            return self.can_move(&self.cells[from.y][from.x], &Direction::North);
+        }
+        if from.y == to.y && from.x + 1 == to.x {
+            return self.can_move(&self.cells[from.y][from.x], &Direction::East);
+        }
+        if from.y == to.y && from.x == to.x + 1 {
+            return self.can_move(&self.cells[from.y][from.x], &Direction::West);
+        }
+
+        false
+    }
+
     fn make_valid(&mut self) {
         loop {
             let visited_map = self.generate_visitable_map();
@@ -369,6 +394,10 @@ impl Maze {
     fn get_cell_in(&self, cur_cell: &Cell, direction: &Direction) -> Option<&Cell> {
         self.get_location(&cur_cell.location, direction)
             .map(|new_location| &self.cells[new_location.y][new_location.x])
+    }
+
+    fn is_in_bounds(&self, location: Location) -> bool {
+        location.x < self.size.width && location.y < self.size.height
     }
 }
 
