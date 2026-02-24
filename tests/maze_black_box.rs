@@ -16,7 +16,7 @@ struct MazeRender {
 }
 
 fn run_maze(width: usize, height: usize) -> String {
-    run_maze_with_input(&format!("{width}\n{height}\n"))
+    run_maze_with_input(&format!("{width}\n{height}\ny\n"))
 }
 
 fn run_maze_with_input(input: &str) -> String {
@@ -308,33 +308,61 @@ fn solver_path_is_bounded_adjacent_and_traversable() {
 
 #[test]
 fn cli_reprompts_after_non_numeric_width_input() {
-    let stdout = run_maze_with_input("abc\n2\n2\n");
+    let stdout = run_maze_with_input("abc\n2\n2\ny\n");
 
     assert!(stdout.contains("Please enter a valid integer >=2."));
     assert_eq!(stdout.matches("Please enter the width.").count(), 2);
     assert_eq!(stdout.matches("Please enter the height.").count(), 1);
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(stdout.contains("Creating a maze of size 2x2."));
     assert!(stdout.contains("Some("));
 }
 
 #[test]
 fn cli_reprompts_after_too_small_height_input() {
-    let stdout = run_maze_with_input("2\n1\n2\n");
+    let stdout = run_maze_with_input("2\n1\n2\ny\n");
 
     assert!(stdout.contains("Please enter a valid integer >=2."));
     assert_eq!(stdout.matches("Please enter the width.").count(), 1);
     assert_eq!(stdout.matches("Please enter the height.").count(), 2);
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(stdout.contains("Creating a maze of size 2x2."));
     assert!(stdout.contains("Some("));
 }
 
 #[test]
 fn cli_reprompts_after_too_small_width_input() {
-    let stdout = run_maze_with_input("1\n2\n2\n");
+    let stdout = run_maze_with_input("1\n2\n2\ny\n");
 
     assert!(stdout.contains("Please enter a valid integer >=2."));
     assert_eq!(stdout.matches("Please enter the width.").count(), 2);
     assert_eq!(stdout.matches("Please enter the height.").count(), 1);
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(stdout.contains("Creating a maze of size 2x2."));
     assert!(stdout.contains("Some("));
+}
+
+#[test]
+fn cli_prints_solution_for_affirmative_answer() {
+    let stdout = run_maze_with_input("2\n2\nyes\n");
+
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
+    assert!(stdout.contains("Some("));
+}
+
+#[test]
+fn cli_does_not_print_solution_for_negative_answer() {
+    let stdout = run_maze_with_input("2\n2\nn\n");
+
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
+    assert!(!stdout.contains("Some("));
+}
+
+#[test]
+fn cli_reprompts_after_invalid_solution_answer() {
+    let stdout = run_maze_with_input("2\n2\nmaybe\nno\n");
+
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 2);
+    assert!(stdout.contains("Please enter y, yes, n, or no."));
+    assert!(!stdout.contains("Some("));
 }

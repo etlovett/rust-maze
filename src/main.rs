@@ -19,17 +19,40 @@ fn get_size(dimension: &str) -> Size {
     }
 }
 
+fn should_print_solution() -> bool {
+    loop {
+        let mut answer = String::new();
+
+        println!("Print solution? (y/yes/n/no)");
+        io::stdin()
+            .read_line(&mut answer)
+            .expect("Failed to read line");
+
+        match answer.trim().to_ascii_lowercase().as_str() {
+            "y" | "yes" => return true,
+            "n" | "no" => return false,
+            _ => {
+                println!("Please enter y, yes, n, or no.");
+                continue;
+            }
+        };
+    }
+}
+
 fn main() {
     let width = get_size("width");
     let height = get_size("height");
+    let print_solution = should_print_solution();
     println!("Creating a maze of size {}x{}.", width, height);
 
     let maze = Maze::new(width, height);
 
     println!("{}", maze);
 
-    let solution = maze.solve();
-    println!("{solution:#?}");
+    if print_solution {
+        let solution = maze.solve();
+        println!("{solution:#?}");
+    }
 
     // TODO(eric): Print the maze with the solution path embedded
 }
