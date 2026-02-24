@@ -384,6 +384,36 @@ impl Maze {
     }
 
     fn as_str(&self) -> String {
+        self.as_str_with_solution(None)
+    }
+
+    pub fn render_with_solution(&self, path: &Path) -> String {
+        self.as_str_with_solution(Some(path))
+    }
+
+    fn as_str_with_solution(&self, path: Option<&Path>) -> String {
+        let base_str = self.base_as_str();
+        let mut rows = base_str
+            .lines()
+            .map(|line| line.chars().collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+
+        if let Some(path) = path {
+            self.overlay_solution_path(&mut rows, path);
+        }
+
+        let mut output = String::new();
+        for row in rows {
+            for c in row {
+                output.push(c);
+            }
+            output.push('\n');
+        }
+
+        output
+    }
+
+    fn base_as_str(&self) -> String {
         let mut maze_str = String::new();
 
         // Generate first line border.
@@ -440,6 +470,111 @@ impl Maze {
         }
 
         maze_str
+    }
+
+    fn overlay_solution_path(&self, rows: &mut [Vec<char>], path: &Path) {
+        if path.is_empty() {
+            return;
+        }
+
+        for window in path.windows(2) {
+            let from = window[0];
+            let to = window[1];
+            self.draw_solution_segment(rows, from, to);
+        }
+
+        for (idx, location) in path.iter().enumerate() {
+            if !self.is_in_bounds(*location) {
+                continue;
+            }
+
+            let (center_row, center_col) = self.get_render_center(*location);
+            if center_row + 1 < rows.len() && center_col < rows[center_row + 1].len() {
+                // Remove the duplicated S/F marker from the lower body row for a cleaner overlay.
+                if matches!(rows[center_row + 1][center_col], 'S' | 'F') {
+                    rows[center_row + 1][center_col] = ' ';
+                }
+            }
+
+            let mut connections = 0u8;
+            if idx > 0 {
+                if let Some(direction) = Self::direction_between(*location, path[idx - 1]) {
+                    connections |= Self::direction_mask(direction);
+                }
+            }
+            if idx + 1 < path.len() {
+                if let Some(direction) = Self::direction_between(*location, path[idx + 1]) {
+                    connections |= Self::direction_mask(direction);
+                }
+            }
+
+            rows[center_row][center_col] = Self::path_char_for_connections(connections);
+        }
+    }
+
+    fn draw_solution_segment(&self, rows: &mut [Vec<char>], from: Location, to: Location) {
+        let (from_row, from_col) = self.get_render_center(from);
+        let (to_row, to_col) = self.get_render_center(to);
+
+        if from_row == to_row {
+            let start = from_col.min(to_col) + 1;
+            let end = from_col.max(to_col);
+            for col in start..end {
+                rows[from_row][col] = '─';
+            }
+        } else if from_col == to_col {
+            let start = from_row.min(to_row) + 1;
+            let end = from_row.max(to_row);
+            for row in rows.iter_mut().take(end).skip(start) {
+                row[from_col] = '│';
+            }
+        }
+    }
+
+    fn get_render_center(&self, location: Location) -> (usize, usize) {
+        let row = 1 + location.y * 3;
+        let col = 3 + location.x * 6;
+        (row, col)
+    }
+
+    fn direction_between(from: Location, to: Location) -> Option<Direction> {
+        if from.x == to.x && from.y + 1 == to.y {
+            Some(Direction::South)
+        } else if from.x == to.x && from.y == to.y + 1 {
+            Some(Direction::North)
+        } else if from.y == to.y && from.x + 1 == to.x {
+            Some(Direction::East)
+        } else if from.y == to.y && from.x == to.x + 1 {
+            Some(Direction::West)
+        } else {
+            None
+        }
+    }
+
+    fn direction_mask(direction: Direction) -> u8 {
+        match direction {
+            Direction::North => 0b0001,
+            Direction::East => 0b0010,
+            Direction::South => 0b0100,
+            Direction::West => 0b1000,
+        }
+    }
+
+    fn path_char_for_connections(mask: u8) -> char {
+        match mask {
+            0b0001 | 0b0100 | 0b0101 => '│',
+            0b0010 | 0b1000 | 0b1010 => '─',
+            0b0011 => '└',
+            0b1001 => '┘',
+            0b0110 => '┌',
+            0b1100 => '┐',
+            0b0111 => '├',
+            0b1101 => '┤',
+            0b1011 => '┴',
+            0b1110 => '┬',
+            0b1111 => '┼',
+            _ => '•',
+        }
     }
 
     /// Produce a solution path for the maze, if one exists.

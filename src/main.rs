@@ -47,11 +47,13 @@ fn main() {
 
     let maze = Maze::new(width, height);
 
-    println!("{}", maze);
-
     if print_solution {
-        let solution = maze.solve();
-        println!("{solution:#?}");
+        let solution = maze
+            .solve()
+            .expect("solver should always return a path for a valid maze");
+        println!("{}", maze.render_with_solution(&solution));
+    } else {
+        println!("{}", maze);
     }
 
     // TODO(eric): Print the maze with the solution path embedded

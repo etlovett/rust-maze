@@ -48,3 +48,21 @@ fn top_level_rendering_has_expected_shape_and_markers() {
         );
     }
 }
+
+#[test]
+fn top_level_solution_rendering_uses_single_line_overlay_chars() {
+    let maze = Maze::new(4, 4);
+    let solution = maze.solve().expect("solver should return a path");
+    let rendered = maze.render_with_solution(&solution);
+
+    let has_overlay = rendered.chars().any(|c| {
+        matches!(
+            c,
+            '─' | '│' | '┌' | '┐' | '└' | '┘' | '├' | '┤' | '┬' | '┴' | '┼'
+        )
+    });
+    assert!(
+        has_overlay,
+        "expected rendered maze to include solution overlay"
+    );
+}

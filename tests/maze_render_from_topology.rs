@@ -22,6 +22,28 @@ fn from_topology_renders_exact_output_for_2x2_fixture() {
 }
 
 #[test]
+fn from_topology_renders_exact_solved_output_for_2x2_fixture() {
+    let east_open = vec![vec![true, false], vec![false, false]];
+    let south_open = vec![vec![true, true], vec![false, false]];
+
+    let maze = Maze::from_topology(2, 2, east_open, south_open)
+        .expect("fixture topology should be valid and connected");
+    let path = maze.solve().expect("solver should return a path");
+
+    let expected = concat!(
+        "╔═════╦═════╗\n",
+        "║  ──────┐  ║\n",
+        "║        │  ║\n",
+        "╠     ╬  │  ╣\n",
+        "║     ║  │  ║\n",
+        "║     ║     ║\n",
+        "╚═════╩═════╝\n"
+    );
+
+    assert_eq!(maze.render_with_solution(&path), expected);
+}
+
+#[test]
 fn from_topology_places_start_and_finish_markers() {
     let east_open = vec![vec![true, true, false], vec![true, true, false]];
     let south_open = vec![vec![true, false, false], vec![false, false, false]];
