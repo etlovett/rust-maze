@@ -65,4 +65,6 @@ fn top_level_solution_rendering_uses_single_line_overlay_chars() {
         has_overlay,
         "expected rendered maze to include solution overlay"
     );
+    assert_eq!(rendered.matches('S').count(), 1);
+    assert_eq!(rendered.matches('F').count(), 1);
 }

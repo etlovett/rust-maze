@@ -508,7 +508,13 @@ impl Maze {
                 }
             }
 
-            rows[center_row][center_col] = Self::path_char_for_connections(connections);
+            rows[center_row][center_col] = if idx == 0 {
+                'S'
+            } else if idx == path.len() - 1 {
+                'F'
+            } else {
+                Self::path_char_for_connections(connections)
+            };
         }
     }
 

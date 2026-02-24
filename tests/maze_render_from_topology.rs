@@ -32,15 +32,18 @@ fn from_topology_renders_exact_solved_output_for_2x2_fixture() {
 
     let expected = concat!(
         "╔═════╦═════╗\n",
-        "║  ──────┐  ║\n",
+        "║  S─────┐  ║\n",
         "║        │  ║\n",
         "╠     ╬  │  ╣\n",
-        "║     ║  │  ║\n",
+        "║     ║  F  ║\n",
         "║     ║     ║\n",
         "╚═════╩═════╝\n"
     );
 
-    assert_eq!(maze.render_with_solution(&path), expected);
+    let rendered = maze.render_with_solution(&path);
+    assert_eq!(rendered, expected);
+    assert_eq!(rendered.matches('S').count(), 1);
+    assert_eq!(rendered.matches('F').count(), 1);
 }
 
 #[test]

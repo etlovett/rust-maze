@@ -83,6 +83,11 @@ fn has_solution_overlay(stdout: &str) -> bool {
     })
 }
 
+fn assert_single_start_and_finish_markers(stdout: &str) {
+    assert_eq!(stdout.matches('S').count(), 1);
+    assert_eq!(stdout.matches('F').count(), 1);
+}
+
 fn char_at(line: &str, index: usize) -> char {
     line.chars()
         .nth(index)
@@ -250,6 +255,7 @@ fn solver_path_is_bounded_adjacent_and_traversable() {
     for (width, height) in [(2, 2), (5, 4), (8, 6)] {
         let stdout = run_maze_with_solution_answer(width, height, "yes");
         assert!(has_solution_overlay(&stdout));
+        assert_single_start_and_finish_markers(&stdout);
         assert!(!stdout.contains("Some("));
     }
 }
@@ -264,6 +270,7 @@ fn cli_reprompts_after_non_numeric_width_input() {
     assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(stdout.contains("Creating a maze of size 2x2."));
     assert!(has_solution_overlay(&stdout));
+    assert_single_start_and_finish_markers(&stdout);
 }
 
 #[test]
@@ -276,6 +283,7 @@ fn cli_reprompts_after_too_small_height_input() {
     assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(stdout.contains("Creating a maze of size 2x2."));
     assert!(has_solution_overlay(&stdout));
+    assert_single_start_and_finish_markers(&stdout);
 }
 
 #[test]
@@ -288,6 +296,7 @@ fn cli_reprompts_after_too_small_width_input() {
     assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(stdout.contains("Creating a maze of size 2x2."));
     assert!(has_solution_overlay(&stdout));
+    assert_single_start_and_finish_markers(&stdout);
 }
 
 #[test]
@@ -296,6 +305,7 @@ fn cli_prints_solution_for_affirmative_answer() {
 
     assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(has_solution_overlay(&stdout));
+    assert_single_start_and_finish_markers(&stdout);
     assert!(!stdout.contains("Some("));
 }
 
@@ -324,6 +334,7 @@ fn cli_prints_solution_for_short_affirmative_answer() {
 
     assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(has_solution_overlay(&stdout));
+    assert_single_start_and_finish_markers(&stdout);
     assert!(!stdout.contains("Some("));
 }
 
@@ -342,6 +353,7 @@ fn cli_accepts_mixed_case_affirmative_answer() {
 
     assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
     assert!(has_solution_overlay(&stdout));
+    assert_single_start_and_finish_markers(&stdout);
     assert!(!stdout.contains("Some("));
 }
 
