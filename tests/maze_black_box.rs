@@ -310,7 +310,7 @@ fn solver_path_is_bounded_adjacent_and_traversable() {
 fn cli_reprompts_after_non_numeric_width_input() {
     let stdout = run_maze_with_input("abc\n2\n2\n");
 
-    assert!(stdout.contains("Please enter a valid u8 number >=2."));
+    assert!(stdout.contains("Please enter a valid integer >=2."));
     assert_eq!(stdout.matches("Please enter the width.").count(), 2);
     assert_eq!(stdout.matches("Please enter the height.").count(), 1);
     assert!(stdout.contains("Creating a maze of size 2x2."));
@@ -321,7 +321,7 @@ fn cli_reprompts_after_non_numeric_width_input() {
 fn cli_reprompts_after_too_small_height_input() {
     let stdout = run_maze_with_input("2\n1\n2\n");
 
-    assert!(stdout.contains("Please enter a valid u8 number >=2."));
+    assert!(stdout.contains("Please enter a valid integer >=2."));
     assert_eq!(stdout.matches("Please enter the width.").count(), 1);
     assert_eq!(stdout.matches("Please enter the height.").count(), 2);
     assert!(stdout.contains("Creating a maze of size 2x2."));
@@ -332,7 +332,7 @@ fn cli_reprompts_after_too_small_height_input() {
 fn cli_reprompts_after_too_small_width_input() {
     let stdout = run_maze_with_input("1\n2\n2\n");
 
-    assert!(stdout.contains("Please enter a valid u8 number >=2."));
+    assert!(stdout.contains("Please enter a valid integer >=2."));
     assert_eq!(stdout.matches("Please enter the width.").count(), 2);
     assert_eq!(stdout.matches("Please enter the height.").count(), 1);
     assert!(stdout.contains("Creating a maze of size 2x2."));

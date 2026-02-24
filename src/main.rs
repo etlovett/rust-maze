@@ -12,7 +12,7 @@ fn get_size(dimension: &str) -> Size {
         match size.trim().parse() {
             Ok(num) if num >= 2 => return num,
             _ => {
-                println!("Please enter a valid u8 number >=2.");
+                println!("Please enter a valid integer >=2.");
                 continue;
             }
         };
