@@ -1,4 +1,4 @@
-use maze::{Location, Maze};
+use maze::{FromTopologyError, Location, Maze};
 
 #[test]
 fn from_topology_renders_exact_output_for_2x2_fixture() {
@@ -44,14 +44,14 @@ fn from_topology_rejects_bad_dimensions() {
         vec![vec![false], vec![false]],
     )
     .expect_err("width < 2 should be rejected");
-    assert!(err.contains("width and height must be >= 2"));
+    assert_eq!(err, FromTopologyError::InvalidDimensions);
 }
 
 #[test]
 fn from_topology_rejects_height_below_minimum() {
     let err = Maze::from_topology(2, 1, vec![vec![false, false]], vec![vec![false, false]])
         .expect_err("height < 2 should be rejected");
-    assert!(err.contains("width and height must be >= 2"));
+    assert_eq!(err, FromTopologyError::InvalidDimensions);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn from_topology_rejects_matrix_shape_mismatch() {
         vec![vec![false, false, false], vec![false, false, false]],
     )
     .expect_err("east_open with wrong height should be rejected");
-    assert!(err.contains("east_open must have one row per maze row"));
+    assert_eq!(err, FromTopologyError::EastOpenHeightMismatch);
 
     let err = Maze::from_topology(
         3,
@@ -72,7 +72,13 @@ fn from_topology_rejects_matrix_shape_mismatch() {
         vec![vec![false, false, false], vec![false, false, false]],
     )
     .expect_err("east_open row with wrong width should be rejected");
-    assert!(err.contains("east_open row 0 must have length 3"));
+    assert_eq!(
+        err,
+        FromTopologyError::EastOpenRowWidthMismatch {
+            row: 0,
+            expected: 3,
+        }
+    );
 
     let err = Maze::from_topology(
         3,
@@ -81,7 +87,7 @@ fn from_topology_rejects_matrix_shape_mismatch() {
         vec![vec![false, false, false]],
     )
     .expect_err("south_open with wrong height should be rejected");
-    assert!(err.contains("south_open must have one row per maze row"));
+    assert_eq!(err, FromTopologyError::SouthOpenHeightMismatch);
 
     let err = Maze::from_topology(
         3,
@@ -90,7 +96,13 @@ fn from_topology_rejects_matrix_shape_mismatch() {
         vec![vec![false, false], vec![false, false, false]],
     )
     .expect_err("south_open row with wrong width should be rejected");
-    assert!(err.contains("south_open row 0 must have length 3"));
+    assert_eq!(
+        err,
+        FromTopologyError::SouthOpenRowWidthMismatch {
+            row: 0,
+            expected: 3,
+        }
+    );
 }
 
 #[test]
@@ -102,7 +114,7 @@ fn from_topology_rejects_open_boundaries() {
         vec![vec![false, false], vec![false, false]],
     )
     .expect_err("open right boundary should be rejected");
-    assert!(err.contains("east_open right boundary must be closed at row 0"));
+    assert_eq!(err, FromTopologyError::EastOpenRightBoundaryOpen { row: 0 });
 
     let err = Maze::from_topology(
         2,
@@ -111,7 +123,10 @@ fn from_topology_rejects_open_boundaries() {
         vec![vec![false, false], vec![true, false]],
     )
     .expect_err("open bottom boundary should be rejected");
-    assert!(err.contains("south_open bottom boundary must be closed at column 0"));
+    assert_eq!(
+        err,
+        FromTopologyError::SouthOpenBottomBoundaryOpen { column: 0 }
+    );
 
     let err = Maze::from_topology(
         3,
@@ -128,7 +143,7 @@ fn from_topology_rejects_open_boundaries() {
         ],
     )
     .expect_err("open right boundary on non-zero row should be rejected");
-    assert!(err.contains("east_open right boundary must be closed at row 1"));
+    assert_eq!(err, FromTopologyError::EastOpenRightBoundaryOpen { row: 1 });
 
     let err = Maze::from_topology(
         3,
@@ -145,7 +160,10 @@ fn from_topology_rejects_open_boundaries() {
         ],
     )
     .expect_err("open bottom boundary on non-zero column should be rejected");
-    assert!(err.contains("south_open bottom boundary must be closed at column 1"));
+    assert_eq!(
+        err,
+        FromTopologyError::SouthOpenBottomBoundaryOpen { column: 1 }
+    );
 }
 
 #[test]
@@ -156,7 +174,7 @@ fn from_topology_rejects_disconnected_cells() {
     let err = Maze::from_topology(2, 2, east_open, south_open)
         .expect_err("disconnected topology should be rejected");
 
-    assert!(err.contains("maze must be fully connected from start"));
+    assert_eq!(err, FromTopologyError::NotFullyConnected);
 }
 
 #[test]

@@ -61,6 +61,50 @@ pub struct Maze {
 
 pub type Path = Vec<Location>;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FromTopologyError {
+    InvalidDimensions,
+    EastOpenHeightMismatch,
+    SouthOpenHeightMismatch,
+    EastOpenRowWidthMismatch { row: usize, expected: usize },
+    SouthOpenRowWidthMismatch { row: usize, expected: usize },
+    EastOpenRightBoundaryOpen { row: usize },
+    SouthOpenBottomBoundaryOpen { column: usize },
+    NotFullyConnected,
+}
+
+impl fmt::Display for FromTopologyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FromTopologyError::InvalidDimensions => {
+                write!(f, "width and height must be >= 2")
+            }
+            FromTopologyError::EastOpenHeightMismatch => {
+                write!(f, "east_open must have one row per maze row")
+            }
+            FromTopologyError::SouthOpenHeightMismatch => {
+                write!(f, "south_open must have one row per maze row")
+            }
+            FromTopologyError::EastOpenRowWidthMismatch { row, expected } => {
+                write!(f, "east_open row {row} must have length {expected}")
+            }
+            FromTopologyError::SouthOpenRowWidthMismatch { row, expected } => {
+                write!(f, "south_open row {row} must have length {expected}")
+            }
+            FromTopologyError::EastOpenRightBoundaryOpen { row } => {
+                write!(f, "east_open right boundary must be closed at row {row}")
+            }
+            FromTopologyError::SouthOpenBottomBoundaryOpen { column } => write!(
+                f,
+                "south_open bottom boundary must be closed at column {column}"
+            ),
+            FromTopologyError::NotFullyConnected => {
+                write!(f, "maze must be fully connected from start")
+            }
+        }
+    }
+}
+
 impl Cell {
     /// Generate a new cell.
     fn new(x: Size, y: Size, width: Size, height: Size) -> Cell {
@@ -139,41 +183,43 @@ impl Maze {
         height: usize,
         east_open: Vec<Vec<bool>>,
         south_open: Vec<Vec<bool>>,
-    ) -> Result<Maze, String> {
+    ) -> Result<Maze, FromTopologyError> {
         if width < 2 || height < 2 {
-            return Err("width and height must be >= 2".to_string());
+            return Err(FromTopologyError::InvalidDimensions);
         }
 
         if east_open.len() != height {
-            return Err("east_open must have one row per maze row".to_string());
+            return Err(FromTopologyError::EastOpenHeightMismatch);
         }
         if south_open.len() != height {
-            return Err("south_open must have one row per maze row".to_string());
+            return Err(FromTopologyError::SouthOpenHeightMismatch);
         }
 
         for (y, row) in east_open.iter().enumerate() {
             if row.len() != width {
-                return Err(format!("east_open row {y} must have length {width}"));
+                return Err(FromTopologyError::EastOpenRowWidthMismatch {
+                    row: y,
+                    expected: width,
+                });
             }
         }
         for (y, row) in south_open.iter().enumerate() {
             if row.len() != width {
-                return Err(format!("south_open row {y} must have length {width}"));
+                return Err(FromTopologyError::SouthOpenRowWidthMismatch {
+                    row: y,
+                    expected: width,
+                });
             }
         }
 
         for (y, row) in east_open.iter().enumerate() {
             if row[width - 1] {
-                return Err(format!(
-                    "east_open right boundary must be closed at row {y}"
-                ));
+                return Err(FromTopologyError::EastOpenRightBoundaryOpen { row: y });
             }
         }
         for x in 0..width {
             if south_open[height - 1][x] {
-                return Err(format!(
-                    "south_open bottom boundary must be closed at column {x}"
-                ));
+                return Err(FromTopologyError::SouthOpenBottomBoundaryOpen { column: x });
             }
         }
 
@@ -197,7 +243,7 @@ impl Maze {
         };
 
         if !maze.is_fully_connected() {
-            return Err("maze must be fully connected from start".to_string());
+            return Err(FromTopologyError::NotFullyConnected);
         }
 
         Ok(maze)
