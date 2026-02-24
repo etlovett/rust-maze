@@ -233,3 +233,87 @@ fn from_topology_solver_validates_connected_2x3_fixture() {
         );
     }
 }
+
+#[test]
+fn from_topology_solver_validates_connected_3x3_fixture() {
+    let east_open = vec![
+        vec![true, false, false],
+        vec![true, true, false],
+        vec![true, true, false],
+    ];
+    let south_open = vec![
+        vec![false, true, true],
+        vec![false, true, false],
+        vec![false, false, false],
+    ];
+    let maze = Maze::from_topology(3, 3, east_open, south_open)
+        .expect("3x3 fixture topology should be valid and connected");
+
+    let path = maze.solve().expect("solver should return a path");
+    assert_eq!(path.first().copied(), Some(Location { x: 0, y: 0 }));
+    assert_eq!(path.last().copied(), Some(Location { x: 2, y: 2 }));
+
+    for p in &path {
+        assert!(p.x < 3, "path x out of bounds: {:?}", p);
+        assert!(p.y < 3, "path y out of bounds: {:?}", p);
+    }
+
+    for pair in path.windows(2) {
+        let a = pair[0];
+        let b = pair[1];
+        let manhattan = a.x.abs_diff(b.x) + a.y.abs_diff(b.y);
+        assert_eq!(
+            manhattan, 1,
+            "path step must be adjacent: {:?} -> {:?}",
+            a, b
+        );
+        assert!(
+            maze.can_move_between(a, b),
+            "expected traversable step in 3x3 fixture: {:?} -> {:?}",
+            a,
+            b
+        );
+    }
+}
+
+#[test]
+fn from_topology_solver_validates_connected_4x3_fixture() {
+    let east_open = vec![
+        vec![true, true, true, false],
+        vec![true, false, true, false],
+        vec![true, true, true, false],
+    ];
+    let south_open = vec![
+        vec![false, true, false, true],
+        vec![false, true, false, true],
+        vec![false, false, false, false],
+    ];
+    let maze = Maze::from_topology(4, 3, east_open, south_open)
+        .expect("4x3 fixture topology should be valid and connected");
+
+    let path = maze.solve().expect("solver should return a path");
+    assert_eq!(path.first().copied(), Some(Location { x: 0, y: 0 }));
+    assert_eq!(path.last().copied(), Some(Location { x: 3, y: 2 }));
+
+    for p in &path {
+        assert!(p.x < 4, "path x out of bounds: {:?}", p);
+        assert!(p.y < 3, "path y out of bounds: {:?}", p);
+    }
+
+    for pair in path.windows(2) {
+        let a = pair[0];
+        let b = pair[1];
+        let manhattan = a.x.abs_diff(b.x) + a.y.abs_diff(b.y);
+        assert_eq!(
+            manhattan, 1,
+            "path step must be adjacent: {:?} -> {:?}",
+            a, b
+        );
+        assert!(
+            maze.can_move_between(a, b),
+            "expected traversable step in 4x3 fixture: {:?} -> {:?}",
+            a,
+            b
+        );
+    }
+}
