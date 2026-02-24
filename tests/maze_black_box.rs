@@ -366,3 +366,35 @@ fn cli_reprompts_after_invalid_solution_answer() {
     assert!(stdout.contains("Please enter y, yes, n, or no."));
     assert!(!stdout.contains("Some("));
 }
+
+#[test]
+fn cli_prints_solution_for_short_affirmative_answer() {
+    let stdout = run_maze_with_input("2\n2\ny\n");
+
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
+    assert!(stdout.contains("Some("));
+}
+
+#[test]
+fn cli_does_not_print_solution_for_full_negative_answer() {
+    let stdout = run_maze_with_input("2\n2\nno\n");
+
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
+    assert!(!stdout.contains("Some("));
+}
+
+#[test]
+fn cli_accepts_mixed_case_affirmative_answer() {
+    let stdout = run_maze_with_input("2\n2\nyEs\n");
+
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
+    assert!(stdout.contains("Some("));
+}
+
+#[test]
+fn cli_accepts_mixed_case_negative_answer() {
+    let stdout = run_maze_with_input("2\n2\nnO\n");
+
+    assert_eq!(stdout.matches("Print solution? (y/yes/n/no)").count(), 1);
+    assert!(!stdout.contains("Some("));
+}
