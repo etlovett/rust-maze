@@ -19,7 +19,21 @@ const ALL_DIRECTIONS: [Direction; 4] = [
     Direction::West,
 ];
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+const CELL_WALL: &str = "═════";
+const CELL_OPENING: &str = "     ";
+const TOP_LEFT_CORNER: char = '╔';
+const TOP_RIGHT_CORNER: char = '╗';
+const TOP_T_JUNCTION: char = '╦';
+const LEFT_T_JUNCTION: char = '╠';
+const RIGHT_T_JUNCTION: char = '╣';
+const BOTTOM_T_JUNCTION: char = '╩';
+const CENTER_JUNCTION: char = '╬';
+const LEFT_WALL: char = '║';
+const RIGHT_WALL: char = '║';
+const BOTTOM_LEFT_CORNER: char = '╚';
+const BOTTOM_RIGHT_CORNER: char = '╝';
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Location {
     pub x: Size,
     pub y: Size,
@@ -48,9 +62,7 @@ pub struct Maze {
 pub type Path = Vec<Location>;
 
 impl Cell {
-    /**
-     * Generate a new cell.
-     */
+    /// Generate a new cell.
     fn new(x: Size, y: Size, width: Size, height: Size) -> Cell {
         Cell {
             maze_size: MazeSize { width, height },
@@ -104,9 +116,7 @@ impl Cell {
 }
 
 impl Maze {
-    /**
-     * Generate a new valid maze.
-     */
+    /// Generate a new valid maze.
     pub fn new(width: Size, height: Size) -> Maze {
         let cells = (0..height)
             .map(|y| {
@@ -331,12 +341,16 @@ impl Maze {
         let mut maze_str = String::new();
 
         // Generate first line border.
-        maze_str.push('╔');
+        maze_str.push(TOP_LEFT_CORNER);
         for i in 0..self.size.width {
             let is_last_cell = i == self.size.width - 1;
 
-            maze_str.push_str("═════");
-            maze_str.push(if is_last_cell { '╗' } else { '╦' });
+            maze_str.push_str(CELL_WALL);
+            maze_str.push(if is_last_cell {
+                TOP_RIGHT_CORNER
+            } else {
+                TOP_T_JUNCTION
+            });
         }
         maze_str.push('\n');
 
@@ -345,31 +359,35 @@ impl Maze {
 
             // Generate the body of each cell for the row, including left and right borders.
             let mut row_str = String::new();
-            row_str.push('║');
+            row_str.push(LEFT_WALL);
             for cell in row {
                 row_str.push_str(&format!("  {}  ", cell.get_center_char()));
-                row_str.push(if cell.can_exit_east { ' ' } else { '║' });
+                row_str.push(if cell.can_exit_east { ' ' } else { RIGHT_WALL });
             }
             row_str.push('\n');
             maze_str.push_str(&row_str);
             maze_str.push_str(&row_str);
 
             // Generate the border below the cell.
-            maze_str.push(if is_last_row { '╚' } else { '╠' });
+            maze_str.push(if is_last_row {
+                BOTTOM_LEFT_CORNER
+            } else {
+                LEFT_T_JUNCTION
+            });
             for cell in row {
                 maze_str.push_str(if cell.can_exit_south {
-                    "     "
+                    CELL_OPENING
                 } else {
-                    "═════"
+                    CELL_WALL
                 });
                 maze_str.push(if cell.is_last_in_row() && cell.is_last_in_col() {
-                    '╝'
+                    BOTTOM_RIGHT_CORNER
                 } else if cell.is_last_in_row() {
-                    '╣'
+                    RIGHT_T_JUNCTION
                 } else if cell.is_last_in_col() {
-                    '╩'
+                    BOTTOM_T_JUNCTION
                 } else {
-                    '╬'
+                    CENTER_JUNCTION
                 });
             }
             maze_str.push('\n');
@@ -378,9 +396,7 @@ impl Maze {
         maze_str
     }
 
-    /**
-     * Produce a solution path for the maze, if one exists.
-     */
+    /// Produce a solution path for the maze, if one exists.
     pub fn solve(&self) -> Option<Path> {
         let start_cell = &self.cells[0][0];
         let mut path = Vec::new();
