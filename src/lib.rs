@@ -2,6 +2,8 @@ use rand::random_bool;
 use rand::seq::SliceRandom;
 use std::fmt;
 
+pub mod game;
+
 pub type Size = usize;
 
 #[derive(Debug, Copy, Clone)]
@@ -391,6 +393,59 @@ impl Maze {
         self.as_str_with_solution(Some(path))
     }
 
+    pub fn render_game(&self, path: &Path, player: Location, show_error: bool) -> String {
+        let with_path = self.render_with_solution(path);
+        let mut rows = with_path
+            .lines()
+            .map(|line| line.chars().collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+
+        let start = Location { x: 0, y: 0 };
+        let finish = Location {
+            x: self.size.width - 1,
+            y: self.size.height - 1,
+        };
+        self.clear_lower_marker_copy(&mut rows, start);
+        self.clear_lower_marker_copy(&mut rows, finish);
+
+        if self.is_in_bounds(player) {
+            let (center_row, center_col) = self.get_render_center(player);
+            let player_row = center_row + 1;
+            if player_row < rows.len() && center_col < rows[player_row].len() {
+                rows[player_row][center_col] = '@';
+            }
+        }
+
+        let mut output = String::new();
+        for row in rows {
+            for c in row {
+                output.push(c);
+            }
+            output.push('\n');
+        }
+
+        if show_error {
+            output.push_str("Blocked by wall. Try a different direction.\n");
+        }
+
+        output
+    }
+
+    fn clear_lower_marker_copy(&self, rows: &mut [Vec<char>], location: Location) {
+        if !self.is_in_bounds(location) {
+            return;
+        }
+
+        let (center_row, center_col) = self.get_render_center(location);
+        let lower_row = center_row + 1;
+        if lower_row < rows.len()
+            && center_col < rows[lower_row].len()
+            && matches!(rows[lower_row][center_col], 'S' | 'F')
+        {
+            rows[lower_row][center_col] = ' ';
+        }
+    }
+
     fn as_str_with_solution(&self, path: Option<&Path>) -> String {
         let base_str = self.base_as_str();
         let mut rows = base_str
@@ -508,9 +563,9 @@ impl Maze {
                 }
             }
 
-            rows[center_row][center_col] = if idx == 0 {
+            rows[center_row][center_col] = if self.is_start_location(*location) {
                 'S'
-            } else if idx == path.len() - 1 {
+            } else if self.is_finish_location(*location) {
                 'F'
             } else {
                 Self::path_char_for_connections(connections)
@@ -677,6 +732,18 @@ impl Maze {
 
     fn is_in_bounds(&self, location: Location) -> bool {
         location.x < self.size.width && location.y < self.size.height
+    }
+
+    fn is_start_location(&self, location: Location) -> bool {
+        location == Location { x: 0, y: 0 }
+    }
+
+    fn is_finish_location(&self, location: Location) -> bool {
+        location
+            == Location {
+                x: self.size.width - 1,
+                y: self.size.height - 1,
+            }
     }
 }
 
