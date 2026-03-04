@@ -1,4 +1,6 @@
-use maze::game::{BLOCKED_MOVE_ERROR_DURATION, GameState, MoveDirection, MoveOutcome};
+use maze::game::{
+    BLOCKED_MOVE_ERROR_DURATION, GameInput, GameState, InputOutcome, MoveDirection, MoveOutcome,
+};
 use maze::{Location, Maze};
 use std::time::{Duration, Instant};
 
@@ -105,4 +107,16 @@ fn game_render_includes_and_hides_error_indicator_by_time() {
 
     let without_error = state.render(&maze, now + BLOCKED_MOVE_ERROR_DURATION);
     assert!(!without_error.contains("Blocked by wall. Try a different direction."));
+}
+
+#[test]
+fn game_input_quit_exits_immediately() {
+    let maze = fixture_maze();
+    let mut state = GameState::new();
+    let now = Instant::now();
+
+    let outcome = state.apply_input(&maze, GameInput::Quit, now);
+    assert_eq!(outcome, InputOutcome::Quit);
+    assert_eq!(state.position(), Location { x: 0, y: 0 });
+    assert_eq!(state.trail(), [Location { x: 0, y: 0 }]);
 }

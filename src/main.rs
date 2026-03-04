@@ -1,10 +1,12 @@
 use crossterm::cursor::{Hide, MoveTo, Show};
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::execute;
 use crossterm::terminal::{
     Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
-use maze::game::{Clock, GameState, InputSource, MoveDirection, MoveOutcome, SystemClock};
+use maze::game::{
+    Clock, GameInput, GameState, InputOutcome, InputSource, MoveDirection, MoveOutcome, SystemClock,
+};
 use maze::{Maze, Size};
 use std::io::{self, IsTerminal, Write};
 use std::time::Duration;
@@ -49,8 +51,29 @@ fn should_print_solution() -> bool {
 
 struct CrosstermInput;
 
+fn map_key_event_to_game_input(key_event: KeyEvent) -> Option<GameInput> {
+    if key_event.kind != KeyEventKind::Press {
+        return None;
+    }
+
+    if key_event.code == KeyCode::Esc {
+        return Some(GameInput::Quit);
+    }
+    if key_event.code == KeyCode::Char('c') && key_event.modifiers.contains(KeyModifiers::CONTROL) {
+        return Some(GameInput::Quit);
+    }
+
+    match key_event.code {
+        KeyCode::Up => Some(GameInput::Move(MoveDirection::Up)),
+        KeyCode::Right => Some(GameInput::Move(MoveDirection::Right)),
+        KeyCode::Down => Some(GameInput::Move(MoveDirection::Down)),
+        KeyCode::Left => Some(GameInput::Move(MoveDirection::Left)),
+        _ => None,
+    }
+}
+
 impl InputSource for CrosstermInput {
-    fn next_direction(&mut self, timeout: Duration) -> io::Result<Option<MoveDirection>> {
+    fn next_input(&mut self, timeout: Duration) -> io::Result<Option<GameInput>> {
         if !event::poll(timeout)? {
             return Ok(None);
         }
@@ -60,19 +83,7 @@ impl InputSource for CrosstermInput {
             return Ok(None);
         };
 
-        if key_event.kind != KeyEventKind::Press {
-            return Ok(None);
-        }
-
-        let direction = match key_event.code {
-            KeyCode::Up => Some(MoveDirection::Up),
-            KeyCode::Right => Some(MoveDirection::Right),
-            KeyCode::Down => Some(MoveDirection::Down),
-            KeyCode::Left => Some(MoveDirection::Left),
-            _ => None,
-        };
-
-        Ok(direction)
+        Ok(map_key_event_to_game_input(key_event))
     }
 }
 
@@ -116,12 +127,16 @@ fn run_game_loop<W: Write, I: InputSource, C: Clock>(
             break;
         }
 
-        if let Some(direction) = input.next_direction(Duration::from_millis(50))? {
+        if let Some(game_input) = input.next_input(Duration::from_millis(50))? {
             let now = clock.now();
-            let move_result = state.apply_move(maze, direction, now);
-            if move_result == MoveOutcome::Finished {
-                draw_frame(writer, &state.render(maze, now))?;
-                break;
+            match state.apply_input(maze, game_input, now) {
+                InputOutcome::Quit => break,
+                InputOutcome::Move(move_result) => {
+                    if move_result == MoveOutcome::Finished {
+                        draw_frame(writer, &state.render(maze, now))?;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -160,4 +175,23 @@ fn main() {
     }
 
     // TODO(eric): Print the maze with the solution path embedded
+}
+
+#[cfg(test)]
+mod tests {
+    use super::map_key_event_to_game_input;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use maze::game::GameInput;
+
+    #[test]
+    fn escape_key_maps_to_quit_input() {
+        let key = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
+        assert_eq!(map_key_event_to_game_input(key), Some(GameInput::Quit));
+    }
+
+    #[test]
+    fn ctrl_c_maps_to_quit_input() {
+        let key = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        assert_eq!(map_key_event_to_game_input(key), Some(GameInput::Quit));
+    }
 }

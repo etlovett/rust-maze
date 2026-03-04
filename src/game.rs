@@ -13,10 +13,22 @@ pub enum MoveDirection {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum GameInput {
+    Move(MoveDirection),
+    Quit,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum MoveOutcome {
     Moved,
     Blocked,
     Finished,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum InputOutcome {
+    Move(MoveOutcome),
+    Quit,
 }
 
 pub trait Clock {
@@ -33,7 +45,7 @@ impl Clock for SystemClock {
 }
 
 pub trait InputSource {
-    fn next_direction(&mut self, timeout: Duration) -> io::Result<Option<MoveDirection>>;
+    fn next_input(&mut self, timeout: Duration) -> io::Result<Option<GameInput>>;
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +116,13 @@ impl GameState {
             MoveOutcome::Finished
         } else {
             MoveOutcome::Moved
+        }
+    }
+
+    pub fn apply_input(&mut self, maze: &Maze, input: GameInput, now: Instant) -> InputOutcome {
+        match input {
+            GameInput::Quit => InputOutcome::Quit,
+            GameInput::Move(direction) => InputOutcome::Move(self.apply_move(maze, direction, now)),
         }
     }
 
